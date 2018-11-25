@@ -20,7 +20,7 @@ class ListingsViewController: UIViewController, UITableViewDelegate, UITableView
         
         // Ensure dynamic cell size
         tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = 150
+        tableView.estimatedRowHeight = 300
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {

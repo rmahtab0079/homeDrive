@@ -46,9 +46,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate, GIDSignInDelegate {
             } else {
                 // User is signed in, instantiate View Controller
                 // ...
+                
+                //let storyboard = UIStoryboard(name: "Main", bundle: nil)
+                //let navViewController = storyboard.instantiateViewController(withIdentifier: "NavController")
+                //self.window?.rootViewController = navViewController
+                
+                /* present loginVC with animation */
+                guard let window = UIApplication.shared.keyWindow else {
+                    return
+                }
+                guard let rootViewController = window.rootViewController else {
+                    return
+                }
                 let storyboard = UIStoryboard(name: "Main", bundle: nil)
-                let navViewController = storyboard.instantiateViewController(withIdentifier: "NavController")
-                self.window?.rootViewController = navViewController
+                let vc = storyboard.instantiateViewController(withIdentifier: "NavController")
+                vc.view.frame = rootViewController.view.frame
+                vc.view.layoutIfNeeded()
+                
+                UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                    window.rootViewController = vc
+                }, completion: { completed in
+                    print("Logged in")
+                })
             }
         }
     }

@@ -42,6 +42,12 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         fpc.removeFromParent()
     }
     
+    /* Initialize initial position of floating panel to bottom */
+    func floatingPanel(_ vc: FloatingPanelController, layoutFor newCollection: UITraitCollection) -> FloatingPanelLayout? {
+        return MyFloatingPanelLayout()
+    }
+    
+    /* Sign out event */
     @IBAction func onTapSignOut(_ sender: Any) {
         let firebaseAuth = Auth.auth()
         do {
@@ -57,4 +63,18 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         }
     }
     
+}
+
+class MyFloatingPanelLayout: FloatingPanelLayout {
+    public var initialPosition: FloatingPanelPosition {
+        return .tip
+    }
+    
+    public func insetFor(position: FloatingPanelPosition) -> CGFloat? {
+        switch position {
+        case .full: return 16.0 // A top inset from safe area
+        case .half: return 216.0 // A bottom inset from the safe area
+        case .tip: return 68.0 // A bottom inset from the safe area
+        }
+    }
 }
