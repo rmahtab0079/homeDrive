@@ -19,6 +19,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         // Initialize a `FloatingPanelController` object.
         fpc = FloatingPanelController()
         
@@ -29,7 +30,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         let listingsVC = storyboard?.instantiateViewController(withIdentifier: "ListingsVC") as! ListingsViewController
         fpc.set(contentViewController: listingsVC)
         
-        // Track a scroll view(or the siblings) in the content view controller.
+        // Track a scroll view(or the siblings) in the listings view controller.
         fpc.track(scrollView: listingsVC.tableView)
         
         // Add and show the views managed by the `FloatingPanelController` object to self.view.
@@ -65,6 +66,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
 }
 
+/* Class to configure floating panel positioning */
 class MyFloatingPanelLayout: FloatingPanelLayout {
     public var initialPosition: FloatingPanelPosition {
         return .tip
