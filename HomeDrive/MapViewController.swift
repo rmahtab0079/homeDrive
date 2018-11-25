@@ -15,6 +15,7 @@ import FloatingPanel
 class MapViewController: UIViewController, FloatingPanelControllerDelegate {
 
     var fpc: FloatingPanelController!
+    var listingsVC: ListingsViewController!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,11 +26,11 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         fpc.delegate = self // Optional
         
         // Set a content view controller.
-        let contentVC = ContentViewController()
-        fpc.set(contentViewController: contentVC)
+        let listingsVC = storyboard?.instantiateViewController(withIdentifier: "ListingsVC") as! ListingsViewController
+        fpc.set(contentViewController: listingsVC)
         
         // Track a scroll view(or the siblings) in the content view controller.
-        fpc.track(scrollView: contentVC.tableView)
+        fpc.track(scrollView: listingsVC.tableView)
         
         // Add and show the views managed by the `FloatingPanelController` object to self.view.
         fpc.addPanel(toParent: self)
@@ -49,7 +50,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
             
             // Set view to login screen
             let storyboard = UIStoryboard(name: "Main", bundle: nil)
-            let loginViewController = storyboard.instantiateViewController(withIdentifier: "LoginViewController")
+            let loginViewController = storyboard.instantiateViewController(withIdentifier: "LoginVC")
             self.present(loginViewController, animated: true, completion: nil)
         } catch let signOutError as NSError {
             print ("Error signing out: %@", signOutError)
