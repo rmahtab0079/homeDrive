@@ -30,16 +30,17 @@ public protocol FloatingPanelLayout: class {
     /// By default, the width of a surface view fits a safe area.
     func prepareLayout(surfaceView: UIView, in view: UIView) -> [NSLayoutConstraint]
 
-    /// Return the backdrop alpha of black color in full position. Default is 0.3.
-    var backdropAlpha: CGFloat { get }
+    /// Returns a CGFloat value to determine the backdrop view's alpha for a position.
+    ///
+    /// Default is 0.3 at full position, otherwise 0.0.
+    func backdropAlphaFor(position: FloatingPanelPosition) -> CGFloat
 }
 
 public extension FloatingPanelLayout {
-    var backdropAlpha: CGFloat { return 0.3 }
     var topInteractionBuffer: CGFloat { return 6.0 }
     var bottomInteractionBuffer: CGFloat { return 6.0 }
 
-    public var supportedPositions: Set<FloatingPanelPosition> {
+    var supportedPositions: Set<FloatingPanelPosition> {
         return Set(FloatingPanelPosition.allCases)
     }
     
@@ -48,6 +49,10 @@ public extension FloatingPanelLayout {
             surfaceView.leftAnchor.constraint(equalTo: view.sideLayoutGuide.leftAnchor, constant: 0.0),
             surfaceView.rightAnchor.constraint(equalTo: view.sideLayoutGuide.rightAnchor, constant: 0.0),
         ]
+    }
+
+    func backdropAlphaFor(position: FloatingPanelPosition) -> CGFloat {
+        return position == .full ? 0.3 : 0.0
     }
 }
 
@@ -80,37 +85,35 @@ public class FloatingPanelDefaultLandscapeLayout: FloatingPanelLayout {
         default: return nil
         }
     }
-
-    public func prepareLayout(surfaceView: UIView, in view: UIView) -> [NSLayoutConstraint] {
-        return [
-            surfaceView.leftAnchor.constraint(equalTo: view.sideLayoutGuide.leftAnchor, constant: 0.0),
-            surfaceView.rightAnchor.constraint(equalTo: view.sideLayoutGuide.rightAnchor, constant: 0.0),
-        ]
-    }
 }
 
 
 class FloatingPanelLayoutAdapter {
+    private weak var parent: UIViewController!
     private weak var surfaceView: FloatingPanelSurfaceView!
-    private weak var backdropVIew: FloatingPanelBackdropView!
+    private weak var backdropView: FloatingPanelBackdropView!
 
     var layout: FloatingPanelLayout {
-        didSet { checkConsistance(of: layout) }
+        didSet {
+            checkLayoutConsistance()
+        }
     }
 
     var safeAreaInsets: UIEdgeInsets = .zero {
         didSet {
             updateHeight()
+            checkLayoutConsistance()
         }
     }
 
+    private var parentHeight: CGFloat = 0.0
     private var heightBuffer: CGFloat = 88.0 // For bounce
     private var fixedConstraints: [NSLayoutConstraint] = []
     private var fullConstraints: [NSLayoutConstraint] = []
     private var halfConstraints: [NSLayoutConstraint] = []
     private var tipConstraints: [NSLayoutConstraint] = []
     private var offConstraints: [NSLayoutConstraint] = []
-    private var heightConstraints: NSLayoutConstraint? = nil
+    private var heightConstraints: [NSLayoutConstraint] = []
 
     private var fullInset: CGFloat {
         return layout.insetFor(position: .full) ?? 0.0
@@ -142,6 +145,10 @@ class FloatingPanelLayoutAdapter {
         }
     }
 
+    var safeAreaBottomY: CGFloat {
+        return surfaceView.superview!.bounds.height - (safeAreaInsets.bottom)
+    }
+
     var adjustedContentInsets: UIEdgeInsets {
         return UIEdgeInsets(top: 0.0,
                             left: 0.0,
@@ -163,28 +170,30 @@ class FloatingPanelLayoutAdapter {
     init(surfaceView: FloatingPanelSurfaceView, backdropView: FloatingPanelBackdropView, layout: FloatingPanelLayout) {
         self.layout = layout
         self.surfaceView = surfaceView
-        self.backdropVIew = backdropView
+        self.backdropView = backdropView
     }
 
     func prepareLayout(toParent parent: UIViewController) {
+        self.parent = parent
+
         surfaceView.translatesAutoresizingMaskIntoConstraints = false
-        backdropVIew.translatesAutoresizingMaskIntoConstraints = false
+        backdropView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.deactivate(fixedConstraints + fullConstraints + halfConstraints + tipConstraints + offConstraints)
 
         // Fixed constraints of surface and backdrop views
         let surfaceConstraints = layout.prepareLayout(surfaceView: surfaceView, in: parent.view!)
-        let backdroptConstraints = [
-            backdropVIew.topAnchor.constraint(equalTo: parent.view.topAnchor,
+        let backdropConstraints = [
+            backdropView.topAnchor.constraint(equalTo: parent.view.topAnchor,
                                               constant: 0.0),
-            backdropVIew.leftAnchor.constraint(equalTo: parent.view.leftAnchor,
+            backdropView.leftAnchor.constraint(equalTo: parent.view.leftAnchor,
                                                constant: 0.0),
-            backdropVIew.rightAnchor.constraint(equalTo: parent.view.rightAnchor,
+            backdropView.rightAnchor.constraint(equalTo: parent.view.rightAnchor,
                                                 constant: 0.0),
-            backdropVIew.bottomAnchor.constraint(equalTo: parent.view.bottomAnchor,
+            backdropView.bottomAnchor.constraint(equalTo: parent.view.bottomAnchor,
                                                  constant: 0.0),
             ]
-        fixedConstraints = surfaceConstraints + backdroptConstraints
+        fixedConstraints = surfaceConstraints + backdropConstraints
 
         // Flexible surface constarints for full, half, tip and off
         fullConstraints = [
@@ -200,7 +209,7 @@ class FloatingPanelLayoutAdapter {
                                              constant: -tipInset),
         ]
         offConstraints = [
-            surfaceView.topAnchor.constraint(equalTo: parent.layoutGuide.bottomAnchor, constant: 0.0),
+            surfaceView.topAnchor.constraint(equalTo: parent.view.bottomAnchor, constant: 0.0),
         ]
     }
 
@@ -213,22 +222,24 @@ class FloatingPanelLayoutAdapter {
             }
         }
 
-        if let consts = self.heightConstraints {
-            NSLayoutConstraint.deactivate([consts])
-        }
-
-        let height = UIScreen.main.bounds.height - (safeAreaInsets.top + fullInset)
-        let consts = surfaceView.heightAnchor.constraint(equalToConstant: height)
-
-        NSLayoutConstraint.activate([consts])
-        heightConstraints = consts
-        surfaceView.bottomOverflow = heightBuffer
+        NSLayoutConstraint.deactivate(heightConstraints)
+        // Must use the parent height, not the screen height because safe area insets
+        // of the parent are relative values. For example, a view controller in
+        // Navigation controller's safe area insets and frame can be changed whether
+        // the navigation bar is translucent or not.
+        let height = self.parent.view.bounds.height - (safeAreaInsets.top + fullInset)
+        heightConstraints = [
+            surfaceView.heightAnchor.constraint(equalToConstant: height)
+        ]
+        NSLayoutConstraint.activate(heightConstraints)
+        surfaceView.set(bottomOverflow: heightBuffer)
     }
 
     func activateLayout(of state: FloatingPanelPosition?) {
         defer {
             surfaceView.superview!.layoutIfNeeded()
         }
+        setBackdropAlpha(of: state)
 
         NSLayoutConstraint.activate(fixedConstraints)
 
@@ -256,15 +267,27 @@ class FloatingPanelLayoutAdapter {
         }
     }
 
-    private func checkConsistance(of layout: FloatingPanelLayout) {
+    func setBackdropAlpha(of target: FloatingPanelPosition?) {
+        if let target = target {
+            self.backdropView.alpha = layout.backdropAlphaFor(position: target)
+        } else {
+            self.backdropView.alpha = 0.0
+        }
+    }
+
+    func checkLayoutConsistance() {
         // Verify layout configurations
-        assert(layout.supportedPositions.count > 1)
-        assert(layout.supportedPositions.contains(layout.initialPosition),
-               "Does not include an initial potision(\(layout.initialPosition)) in supportedPositions(\(layout.supportedPositions))")
-        layout.supportedPositions.forEach { (pos) in
+        let supportedPositions = layout.supportedPositions
+
+        assert(supportedPositions.count > 0)
+        assert(supportedPositions.contains(layout.initialPosition),
+               "Does not include an initial potision(\(layout.initialPosition)) in supportedPositions(\(supportedPositions))")
+
+        supportedPositions.forEach { pos in
             assert(layout.insetFor(position: pos) != nil,
                    "Undefined an inset for a pos(\(pos))")
         }
+
         if halfInset > 0 {
             assert(halfInset > tipInset, "Invalid half and tip insets")
         }

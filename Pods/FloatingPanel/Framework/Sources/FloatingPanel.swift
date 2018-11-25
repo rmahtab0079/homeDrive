@@ -34,11 +34,17 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
     unowned let viewcontroller: FloatingPanelController
 
     private(set) var state: FloatingPanelPosition = .tip
+    private var isBottomState: Bool {
+        let remains = layoutAdapter.layout.supportedPositions.filter { $0.rawValue > state.rawValue }
+        return remains.count == 0
+    }
 
     let panGesture: FloatingPanelPanGestureRecognizer
+    var isRemovalInteractionEnabled: Bool = false
 
     private var animator: UIViewPropertyAnimator?
     private var initialFrame: CGRect = .zero
+    private var initialScrollOffset: CGPoint = .zero
     private var transOffsetY: CGFloat = 0
     private var interactionInProgress: Bool = false
 
@@ -61,6 +67,8 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
                                                         layout: layout)
         self.behavior = behavior
 
+        state = layoutAdapter.layout.initialPosition
+
         panGesture = FloatingPanelPanGestureRecognizer()
 
         if #available(iOS 11.0, *) {
@@ -74,7 +82,7 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         panGesture.delegate = self
     }
 
-    func layoutViews(in vc: UIViewController) {
+    func setUpViews(in vc: UIViewController) {
         unowned let view = vc.view!
 
         view.insertSubview(backdropView, belowSubview: surfaceView)
@@ -139,23 +147,24 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
 
     private func updateLayout(to target: FloatingPanelPosition?) {
         self.layoutAdapter.activateLayout(of: target)
-        self.setBackdropAlpha(of: target)
-    }
-
-    private func setBackdropAlpha(of target: FloatingPanelPosition?) {
-        switch target {
-        case .full?:
-            self.backdropView.alpha = layoutAdapter.layout.backdropAlpha
-        default:
-            self.backdropView.alpha = 0.0
-        }
     }
 
     private func getBackdropAlpha(with translation: CGPoint) -> CGFloat {
-        let topY = layoutAdapter.topY
-        let middleY = layoutAdapter.middleY
         let currentY = getCurrentY(from: initialFrame, with: translation)
-        return (1 - (currentY - topY) / (middleY - topY)) * layoutAdapter.layout.backdropAlpha
+
+        let next = directionalPosition(with: translation)
+        let pre = redirectionalPosition(with: translation)
+        let nextY = layoutAdapter.positionY(for: next)
+        let preY = layoutAdapter.positionY(for: pre)
+
+        let nextAlpha = layoutAdapter.layout.backdropAlphaFor(position: next)
+        let preAlpha = layoutAdapter.layout.backdropAlphaFor(position: pre)
+
+        if preY == nextY {
+            return preAlpha
+        } else {
+            return preAlpha + max(min(1.0, 1.0 - (nextY - currentY) / (nextY - preY) ), 0.0) * (nextAlpha - preAlpha)
+        }
     }
 
     // MARK: - UIGestureRecognizerDelegate
@@ -164,7 +173,7 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
                                   shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         guard gestureRecognizer == panGesture else { return false }
 
-        log.debug("shouldRecognizeSimultaneouslyWith", otherGestureRecognizer)
+        /* log.debug("shouldRecognizeSimultaneouslyWith", otherGestureRecognizer) */
 
         return otherGestureRecognizer == scrollView?.panGestureRecognizer
     }
@@ -172,7 +181,10 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         guard gestureRecognizer == panGesture else { return false }
 
-        // Do not begin any gestures excluding the tracking scrollView's pan gesture until the pan gesture fails
+        /* log.debug("shouldBeRequiredToFailBy", otherGestureRecognizer) */
+
+        // Do not begin any gestures excluding the tracking scrollView's pan gesture
+        // until the pan gesture fails
         if otherGestureRecognizer == scrollView?.panGestureRecognizer {
             return false
         } else {
@@ -183,10 +195,21 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         guard gestureRecognizer == panGesture else { return false }
 
-        // Do not begin the pan gesture until any other gestures fail except fo the tracking scrollView's pan gesture.
+        /* log.debug("shouldRequireFailureOf", otherGestureRecognizer) */
+
+        // Do not begin the pan gesture until any other gestures fail except for
+        // the tracking scrollView's pan gesture and other gestures.
+        if let scrollView = scrollView {
+            if scrollView.panGestureRecognizer == otherGestureRecognizer {
+                return false
+            }
+            // For short scroll contents
+            if scrollView.gestureRecognizers?.contains(otherGestureRecognizer) ?? false {
+                return false
+            }
+        }
+
         switch otherGestureRecognizer {
-        case scrollView?.panGestureRecognizer:
-            return false
         case is UIPanGestureRecognizer,
              is UISwipeGestureRecognizer,
              is UIRotationGestureRecognizer,
@@ -199,42 +222,66 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
     }
 
     // MARK: - Gesture handling
-
+    private let offsetThreshold: CGFloat = 5.0 // Optimal value from testing
     @objc func handle(panGesture: UIPanGestureRecognizer) {
         log.debug("Gesture >>>>", panGesture)
+        let velocity = panGesture.velocity(in: panGesture.view)
 
         switch panGesture {
         case scrollView?.panGestureRecognizer:
             guard let scrollView = scrollView else { return }
+
+            log.debug("SrollPanGesture ScrollView.contentOffset >>>", scrollView.contentOffset.y, scrollView.contentSize, scrollView.bounds.size)
+
+            // Prevent scoll slip by the top bounce when the scroll view's height is
+            // less than the content's height
+            if scrollView.isDecelerating == false, scrollView.contentSize.height > scrollView.bounds.height {
+                scrollView.bounces = (scrollView.contentOffset.y > offsetThreshold)
+            }
+
             if surfaceView.frame.minY > layoutAdapter.topY {
-                scrollView.contentOffset.y = scrollView.contentOffsetZero.y
+                switch state {
+                case .full:
+                    // Prevent over scrolling from scroll top in moving the panel from full.
+                    scrollView.contentOffset.y = scrollView.contentOffsetZero.y
+                case .half, .tip:
+                    guard scrollView.isDecelerating == false else {
+                        // Don't fix the scroll offset in animating the panel to half and tip.
+                        // It causes a buggy scrolling deceleration because `state` becomes
+                        // a target position in animating the panel on the interaction from full.
+                        return
+                    }
+                    // Fix the scroll offset in moving the panel from half and tip.
+                    scrollView.contentOffset.y = initialScrollOffset.y
+                }
+
+                // Always hide a scroll indicator at the non-top.
+                if interactionInProgress {
+                    lockScrollView()
+                }
+            } else {
+                // Always show a scroll indicator at the top.
+                if interactionInProgress {
+                    unlockScrollView()
+                }
             }
         case panGesture:
             let translation = panGesture.translation(in: panGesture.view!.superview)
-            let velocity = panGesture.velocity(in: panGesture.view)
             let location = panGesture.location(in: panGesture.view)
 
-            log.debug(panGesture.state, ">>>", "{ translation: \(translation), velocity: \(velocity) }")
+            log.debug(panGesture.state, ">>>", "translation: \(translation.y), velocity: \(velocity.y)")
 
-            if let scrollView = scrollView, scrollView.frame.contains(location) {
-                log.debug("ScrollView.contentOffset >>>", scrollView.contentOffset)
-                if state == .full {
-                    if scrollView.contentOffset.y - scrollView.contentOffsetZero.y > 0 {
-                        return
-                    }
-                    if scrollView.isDecelerating {
-                        return
-                    }
-                    if interactionInProgress == false, velocity.y < 0 || velocity.y > 2500.0 {
-                        return
-                    }
-                }
+            if shouldScrollViewHandleTouch(scrollView, point: location, velocity: velocity) {
+                return
             }
 
             switch panGesture.state {
             case .began:
                 panningBegan()
             case .changed:
+                if interactionInProgress == false {
+                    startInteraction(with: translation)
+                }
                 panningChange(with: translation)
             case .ended, .cancelled, .failed:
                 panningEnd(with: translation, velocity: velocity)
@@ -246,18 +293,47 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         }
     }
 
+    private func shouldScrollViewHandleTouch(_ scrollView: UIScrollView?, point: CGPoint, velocity: CGPoint) -> Bool {
+        let grabberBarFrame = CGRect(x: surfaceView.bounds.origin.x,
+                                     y: surfaceView.bounds.origin.y,
+                                     width: surfaceView.bounds.width,
+                                     height: FloatingPanelSurfaceView.topGrabberBarHeight * 2)
+
+        guard
+            let scrollView = scrollView,      // When no scrollView, nothing to handle.
+            state == .full,                   // When not .full, don't scroll.
+            interactionInProgress == false,   // When interaction already in progress, don't scroll.
+            scrollView.frame.contains(point), // When point not in scrollView, don't scroll.
+            !grabberBarFrame.contains(point)  // When point within grabber area, don't scroll.
+        else {
+            return false
+        }
+
+        log.debug("ScrollView.contentOffset >>>", scrollView.contentOffset.y)
+
+        let offset = scrollView.contentOffset.y - scrollView.contentOffsetZero.y
+        if  abs(offset) > offsetThreshold {
+            return true
+        }
+        if scrollView.isDecelerating {
+            return true
+        }
+        if velocity.y < 0 {
+            return true
+        }
+
+        return false
+    }
+
     private func panningBegan() {
         // A user interaction does not always start from Began state of the pan gesture
         // because it can be recognized in scrolling a content in a content view controller.
-        // So I do nothing here.
-        log.debug("panningBegan \(initialFrame)")
+        // So do nothing here.
+        log.debug("panningBegan")
     }
 
     private func panningChange(with translation: CGPoint) {
         log.debug("panningChange")
-        if interactionInProgress == false {
-            startInteraction(with: translation)
-        }
 
         let currentY = getCurrentY(from: initialFrame, with: translation)
 
@@ -275,12 +351,18 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
             initialFrame = surfaceView.frame
         }
 
-        stopScrollDeceleration = (surfaceView.frame.minY > layoutAdapter.topY) // Projecting the dragging to the scroll dragging
+        stopScrollDeceleration = (surfaceView.frame.minY > layoutAdapter.topY) // Projecting the dragging to the scroll dragging or not
 
         let targetPosition = self.targetPosition(with: translation, velocity: velocity)
         let distance = self.distance(to: targetPosition, with: translation)
 
         endInteraction(for: targetPosition)
+
+        if isRemovalInteractionEnabled, isBottomState {
+            if startRemovalAnimation(with: translation, velocity: velocity, distance: distance) {
+                return
+            }
+        }
 
         viewcontroller.delegate?.floatingPanelDidEndDragging(viewcontroller, withVelocity: velocity, targetPosition: targetPosition)
         viewcontroller.delegate?.floatingPanelWillBeginDecelerating(viewcontroller)
@@ -288,23 +370,54 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         startAnimation(to: targetPosition, at: distance, with: velocity)
     }
 
+    private func startRemovalAnimation(with translation: CGPoint, velocity: CGPoint, distance: CGFloat) -> Bool {
+        let posY = layoutAdapter.positionY(for: state)
+        let currentY = getCurrentY(from: initialFrame, with: translation)
+        let safeAreaBottomY = layoutAdapter.safeAreaBottomY
+        let vth = behavior.removalVelocity
+        let pth = max(min(behavior.removalProgress, 1.0), 0.0)
+        let velocityVector = (distance != 0) ? CGVector(dx: 0, dy: max(min(velocity.y/distance, vth), 0.0)) : .zero
+
+        guard (safeAreaBottomY - posY) != 0 else { return false }
+        guard (currentY - posY) / (safeAreaBottomY - posY) >= pth || velocityVector.dy == vth else { return false }
+
+        viewcontroller.delegate?.floatingPanelDidEndDraggingToRemove(viewcontroller, withVelocity: velocity)
+        let animator = self.behavior.removalInteractionAnimator(self.viewcontroller, with: velocityVector)
+        animator.addAnimations { [weak self] in
+            guard let self = self else { return }
+            self.updateLayout(to: nil)
+        }
+        animator.addCompletion({ [weak self] (_) in
+            guard let self = self else { return }
+            self.viewcontroller.removePanelFromParent(animated: false)
+            self.viewcontroller.delegate?.floatingPanelDidEndRemove(self.viewcontroller)
+        })
+        animator.startAnimation()
+        return true
+    }
+
     private func startInteraction(with translation: CGPoint) {
+        /* Don't lock a scroll view to show a scroll indicator after hitting the top */
         log.debug("startInteraction")
         initialFrame = surfaceView.frame
+        if let scrollView = scrollView {
+            initialScrollOffset = scrollView.contentOffset
+        }
         transOffsetY = translation.y
-        viewcontroller.delegate?.floatingPanelWillBeginDragging(viewcontroller)
 
-        lockScrollView()
+        viewcontroller.delegate?.floatingPanelWillBeginDragging(viewcontroller)
 
         interactionInProgress = true
     }
 
     private func endInteraction(for targetPosition: FloatingPanelPosition) {
         log.debug("endInteraction for \(targetPosition)")
-        if targetPosition != .full {
-            lockScrollView(withBounce: true)
-        }
         interactionInProgress = false
+
+        // Prevent to keep a scoll view indicator visible at the half/tip position
+        if targetPosition != .full {
+            lockScrollView()
+        }
     }
 
     private func getCurrentY(from rect: CGRect, with translation: CGPoint) -> CGFloat {
@@ -334,7 +447,7 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
             guard let self = self else { return }
             if self.state == targetPosition {
                 self.surfaceView.frame.origin.y = targetY
-                self.setBackdropAlpha(of: targetPosition)
+                self.layoutAdapter.setBackdropAlpha(of: targetPosition)
             } else {
                 self.updateLayout(to: targetPosition)
             }
@@ -358,8 +471,11 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         self.animator = nil
         self.viewcontroller.delegate?.floatingPanelDidEndDecelerating(self.viewcontroller)
 
+        stopScrollDeceleration = false
         // Don't unlock scroll view in animating view when presentation layer != model layer
-        unlockScrollView()
+        if targetPosition == .full {
+            unlockScrollView()
+        }
     }
 
     private func distance(to targetPosition: FloatingPanelPosition, with translation: CGPoint) -> CGFloat {
@@ -377,6 +493,66 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         }
     }
 
+    private func directionalPosition(with translation: CGPoint) -> FloatingPanelPosition {
+        let currentY = getCurrentY(from: initialFrame, with: translation)
+
+        let supportedPositions: Set = layoutAdapter.layout.supportedPositions
+
+        if supportedPositions.count == 1 {
+            return state
+        }
+
+        switch supportedPositions {
+        case [.full, .half]: return translation.y >= 0 ? .half : .full
+        case [.half, .tip]: return translation.y >= 0 ? .tip : .half
+        case [.full, .tip]: return translation.y >= 0 ? .tip : .full
+        default:
+            let middleY = layoutAdapter.middleY
+
+            switch state {
+            case .full:
+                if translation.y <= 0 {
+                    return .full
+                }
+                return currentY > middleY ? .tip : .half
+            case .half:
+                return translation.y >= 0 ? .tip : .full
+            case .tip:
+                if translation.y >= 0 {
+                    return .tip
+                }
+                return currentY > middleY ? .half : .full
+            }
+        }
+    }
+
+    private func redirectionalPosition(with translation: CGPoint) -> FloatingPanelPosition {
+        let currentY = getCurrentY(from: initialFrame, with: translation)
+
+        let supportedPositions: Set = layoutAdapter.layout.supportedPositions
+
+        if supportedPositions.count == 1 {
+            return state
+        }
+
+        switch supportedPositions {
+        case [.full, .half]: return translation.y >= 0 ? .full : .half
+        case [.half, .tip]: return translation.y >= 0 ? .half : .tip
+        case [.full, .tip]: return translation.y >= 0 ? .full : .tip
+        default:
+            let middleY = layoutAdapter.middleY
+
+            switch state {
+            case .full:
+                return currentY > middleY ? .half : .full
+            case .half:
+                return .half
+            case .tip:
+                return currentY > middleY ? .tip : .half
+            }
+        }
+    }
+
     // Distance travelled after decelerating to zero velocity at a constant rate.
     // Refer to the slides p176 of [Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)
     private func project(initialVelocity: CGFloat) -> CGFloat {
@@ -388,7 +564,9 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         let currentY = getCurrentY(from: initialFrame, with: translation)
         let supportedPositions: Set = layoutAdapter.layout.supportedPositions
 
-        assert(supportedPositions.count > 1)
+        if supportedPositions.count == 1 {
+            return state
+        }
 
         switch supportedPositions {
         case [.full, .half]:
@@ -399,14 +577,44 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
             return targetPosition(from: [.full, .tip], at: currentY, velocity: velocity)
         default:
             /*
-             [topY|full]---[th1]---[middleY|default]---[th2]---[bottomY|collapsed]
+             [topY|full]---[th1]---[middleY|half]---[th2]---[bottomY|tip]
              */
             let topY = layoutAdapter.topY
             let middleY = layoutAdapter.middleY
             let bottomY = layoutAdapter.bottomY
 
-            let th1 = (topY + middleY) / 2
-            let th2 = (middleY + bottomY) / 2
+            let target: FloatingPanelPosition
+            let forwardYDirection: Bool
+
+            switch state {
+            case .full:
+                target = .half
+                forwardYDirection = true
+            case .half:
+                if (currentY < middleY) {
+                    target = .full
+                    forwardYDirection = false
+                } else {
+                    target = .tip
+                    forwardYDirection = true
+                }
+            case .tip:
+                target = .half
+                forwardYDirection = false
+            }
+
+            let redirectionalProgress = max(min(behavior.redirectionalProgress(viewcontroller, from: state, to: target), 1.0), 0.0)
+
+            let th1: CGFloat
+            let th2: CGFloat
+
+            if forwardYDirection {
+                th1 = topY + (middleY - topY) * redirectionalProgress
+                th2 = middleY + (bottomY - middleY) * redirectionalProgress
+            } else {
+                th1 = middleY - (middleY - topY) * redirectionalProgress
+                th2 = bottomY - (bottomY - middleY) * redirectionalProgress
+            }
 
             switch currentY {
             case ..<th1:
@@ -446,7 +654,10 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         let topY = layoutAdapter.positionY(for: top)
         let bottomY = layoutAdapter.positionY(for: bottom)
 
-        let th = (topY + bottomY) / 2
+        let target = top == state ? bottom : top
+        let redirectionalProgress = max(min(behavior.redirectionalProgress(viewcontroller, from: state, to: target), 1.0), 0.0)
+
+        let th = topY + (bottomY - topY) * redirectionalProgress
 
         switch currentY {
         case ..<th:
@@ -466,17 +677,15 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
 
     // MARK: - ScrollView handling
 
-    func lockScrollView(withBounce bounce: Bool = false) {
+    private func lockScrollView() {
         guard let scrollView = scrollView else { return }
 
         scrollView.isDirectionalLockEnabled = true
-        if bounce {
-            scrollView.bounces = false
-        }
+        scrollView.bounces = false
         scrollView.showsVerticalScrollIndicator = false
     }
 
-    func unlockScrollView() {
+    private func unlockScrollView() {
         guard let scrollView = scrollView else { return }
 
         scrollView.isDirectionalLockEnabled = false
@@ -496,6 +705,13 @@ class FloatingPanel: NSObject, UIGestureRecognizerDelegate, UIScrollViewDelegate
         } else {
             return super.forwardingTarget(for: aSelector)
         }
+    }
+
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        if state != .full {
+            initialScrollOffset = scrollView.contentOffset
+        }
+        userScrollViewDelegate?.scrollViewDidEndScrollingAnimation?(scrollView)
     }
 
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {

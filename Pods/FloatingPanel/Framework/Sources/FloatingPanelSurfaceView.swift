@@ -21,15 +21,12 @@ public class FloatingPanelSurfaceView: UIView {
     /// A UIView object that can have the surface view added to it.
     public var contentView: UIView!
 
-    private var color: UIColor? = .white { didSet { setNeedsDisplay() } }
-    var bottomOverflow: CGFloat = 0.0 { didSet { setNeedsDisplay() }}
+    private var color: UIColor? = .white { didSet { setNeedsLayout() } }
+    private var bottomOverflow: CGFloat = 0.0 // Must not call setNeedsLayout()
 
     public override var backgroundColor: UIColor? {
         get { return color }
-        set {
-            color = newValue
-            setNeedsDisplay()
-        }
+        set { color = newValue }
     }
 
     /// The radius to use when drawing top rounded corners.
@@ -59,7 +56,7 @@ public class FloatingPanelSurfaceView: UIView {
     /// The color of the surface border.
     public var borderWidth: CGFloat = 0.0  { didSet { setNeedsLayout() } }
 
-    private var shadowLayer: CAShapeLayer!  { didSet { setNeedsLayout() } }
+    private var backgroundLayer: CAShapeLayer!  { didSet { setNeedsLayout() } }
 
     private struct Default {
         public static let grabberTopPadding: CGFloat = 6.0
@@ -79,10 +76,14 @@ public class FloatingPanelSurfaceView: UIView {
         super.backgroundColor = .clear
         self.clipsToBounds = false
 
+        let backgroundLayer = CAShapeLayer()
+        layer.insertSublayer(backgroundLayer, at: 0)
+        self.backgroundLayer = backgroundLayer
+
         let contentView = FloatingPanelSurfaceContentView()
         addSubview(contentView)
         self.contentView = contentView as UIView
-        // contentView.backgroundColor = .lightGray
+        contentView.backgroundColor = color
         contentView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             contentView.topAnchor.constraint(equalTo: topAnchor, constant: 0.0),
@@ -102,17 +103,39 @@ public class FloatingPanelSurfaceView: UIView {
             grabberHandle.heightAnchor.constraint(equalToConstant: grabberHandle.frame.height),
             grabberHandle.centerXAnchor.constraint(equalTo: centerXAnchor),
             ])
-
-        let shadowLayer = CAShapeLayer()
-        layer.insertSublayer(shadowLayer, at: 0)
-        self.shadowLayer = shadowLayer
     }
 
     public override func layoutSubviews() {
         super.layoutSubviews()
 
-        updateShadowLayer()
+        updateLayers()
+        updateContentViewMask()
 
+        contentView.layer.borderColor = borderColor?.cgColor
+        contentView.layer.borderWidth = borderWidth
+        contentView.backgroundColor = color
+    }
+
+    private func updateLayers() {
+        log.debug("SurfaceView bounds", bounds)
+        
+        var rect = bounds
+        rect.size.height += bottomOverflow // Expand the height for overflow buffer
+        let path = UIBezierPath(roundedRect: rect,
+                                byRoundingCorners: [.topLeft, .topRight],
+                                cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
+        backgroundLayer.path = path.cgPath
+        backgroundLayer.fillColor = color?.cgColor
+		
+        if shadowHidden == false {
+            layer.shadowColor = shadowColor.cgColor
+            layer.shadowOffset = shadowOffset
+            layer.shadowOpacity = shadowOpacity
+            layer.shadowRadius = shadowRadius
+        }
+    }
+
+    private func updateContentViewMask() {
         if #available(iOS 11, *) {
             // Don't use `contentView.clipToBounds` because it prevents content view from expanding the height of a subview of it
             // for the bottom overflow like Auto Layout settings of UIVisualEffectView in Main.storyborad of Example/Maps.
@@ -129,26 +152,24 @@ public class FloatingPanelSurfaceView: UIView {
             // Don't use `contentView.layer.mask` because of a UIVisualEffectView issue in iOS 10, https://forums.developer.apple.com/thread/50854
             // Instead, a user can mask the content view manually in an application.
         }
-
-        contentView.layer.borderColor = borderColor?.cgColor
-        contentView.layer.borderWidth = borderWidth
     }
 
-    private func updateShadowLayer() {
-        log.debug("SurfaceView bounds", bounds)
-        var rect = bounds
-        rect.size.height += bottomOverflow // Expand the height for overflow buffer
-        let path = UIBezierPath(roundedRect: rect,
-                                byRoundingCorners: [.topLeft, .topRight],
-                                cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
-        shadowLayer.path = path.cgPath
-        shadowLayer.fillColor = color?.cgColor
-        if shadowHidden == false {
-            shadowLayer.shadowPath = shadowLayer.path
-            shadowLayer.shadowColor = shadowColor.cgColor
-            shadowLayer.shadowOffset = shadowOffset
-            shadowLayer.shadowOpacity = shadowOpacity
-            shadowLayer.shadowRadius = shadowRadius
-        }
+    func set(bottomOverflow: CGFloat) {
+        self.bottomOverflow = bottomOverflow
+        updateLayers()
+        updateContentViewMask()
+    }
+
+
+    func add(childView: UIView) {
+        contentView.addSubview(childView)
+        childView.frame = contentView.bounds
+        childView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            childView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 0.0),
+            childView.leftAnchor.constraint(equalTo: contentView.leftAnchor, constant: 0.0),
+            childView.rightAnchor.constraint(equalTo: contentView.rightAnchor, constant: 0.0),
+            childView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: 0.0),
+            ])
     }
 }
