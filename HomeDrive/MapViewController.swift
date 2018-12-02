@@ -11,6 +11,7 @@ import Firebase
 import GoogleSignIn
 import GoogleMaps
 import FloatingPanel
+import SideMenu
 
 class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
@@ -29,6 +30,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         super.viewDidLoad()
         setUpGoogleMaps()
         setUpFloatingPanel()
+        setUpSideMenu()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -117,18 +119,19 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
     /* Menu tapped event */
     @objc func onTapMenu(_ button: UIButton) {
-        let firebaseAuth = Auth.auth()
-        do {
-            try firebaseAuth.signOut()
-            GIDSignIn.sharedInstance()?.signOut()
-            
-            // Set view to login screen
-            let storyboard = UIStoryboard(name: "Main", bundle: nil)
-            let loginViewController = storyboard.instantiateViewController(withIdentifier: "LoginVC")
-            self.present(loginViewController, animated: true, completion: nil)
-        } catch let signOutError as NSError {
-            print ("Error signing out: %@", signOutError)
-        }
+        performSegue(withIdentifier: "SideMenuNavSegue", sender: UIButton.self)
+        /*
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        let destinationViewController = storyboard.instantiateViewController(withIdentifier: "MenuNav") as! UISideMenuNavigationController
+        present(destinationViewController, animated: true, completion: nil)
+        */
+    }
+    
+    func setUpSideMenu() {
+        SideMenuManager.default.menuPushStyle = .replace
+        SideMenuManager.default.menuPresentMode = .menuSlideIn
+        SideMenuManager.default.menuFadeStatusBar = false
+        SideMenuManager.default.menuAlwaysAnimate = true
     }
     
     /***********************************/

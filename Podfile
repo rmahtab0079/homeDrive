@@ -13,4 +13,5 @@ target 'HomeDrive' do
 	pod 'FirebaseUI/Google'
 	pod 'GoogleMaps'
 	pod 'FloatingPanel'
+	pod 'SideMenu'
 end
