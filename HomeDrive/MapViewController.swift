@@ -18,7 +18,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     var locationManager = CLLocationManager()
     var currentLocation: CLLocation?
     //var placesClient: GMSPlacesClient!
-    var zoomLevel: Float = 20.0
+    var zoomLevel: Float = 15.0
     
     var fpc: FloatingPanelController!
     var listingsVC: ListingsViewController!
@@ -68,6 +68,14 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         marker.snippet = "Australia"
         marker.map = mapView
         */
+        
+        // overlay button on top of Map
+        let btn: UIButton = UIButton(type: UIButton.ButtonType.roundedRect)
+        btn.frame = CGRect(x: 16, y: 16, width: 48, height: 48)
+        let btnIcon = UIImage(named: "menu-128.png")
+        btn.setBackgroundImage(btnIcon, for: .normal)
+        btn.addTarget(self, action: #selector(onTapMenu(_:)), for: .touchUpInside)
+        self.view.addSubview(btn)
     }
     
     /* function to set up floating panel above google maps view */
@@ -106,8 +114,9 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         fpc.move(to: .tip, animated: true)
     }
     
-    /* Sign out event */
-    @IBAction func onTapSignOut(_ sender: Any) {
+    
+    /* Menu tapped event */
+    @objc func onTapMenu(_ button: UIButton) {
         let firebaseAuth = Auth.auth()
         do {
             try firebaseAuth.signOut()
@@ -172,6 +181,7 @@ extension MapViewController: CLLocationManagerDelegate {
             mapView.camera = camera
         } else {
             mapView.animate(to: camera)
+            mapView.isMyLocationEnabled = true
         }
     }
     

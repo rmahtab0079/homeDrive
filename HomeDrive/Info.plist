@@ -57,5 +57,7 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs location services enabled to show available parking spaces nearby.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>This app needs location services enabled to show available parking spaces nearby.</string>
 </dict>
 </plist>

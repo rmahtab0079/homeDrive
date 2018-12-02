@@ -16,6 +16,9 @@
 		3404390421AA6C350033C37D /* ListingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3404390321AA6C350033C37D /* ListingsViewController.swift */; };
 		34B0AC6E21AA93A800C721EE /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 34B0AC6D21AA93A800C721EE /* Launch Screen.storyboard */; };
 		34B0AC7021AA983C00C721EE /* splashscreen.png in Resources */ = {isa = PBXBuildFile; fileRef = 34B0AC6F21AA983C00C721EE /* splashscreen.png */; };
+		34F0AFBE21B374F200682170 /* menu-64.png in Resources */ = {isa = PBXBuildFile; fileRef = 34F0AFBD21B374F200682170 /* menu-64.png */; };
+		34F0AFC021B3780600682170 /* menu-512.png in Resources */ = {isa = PBXBuildFile; fileRef = 34F0AFBF21B3780600682170 /* menu-512.png */; };
+		34F0AFC221B3784200682170 /* menu-128.png in Resources */ = {isa = PBXBuildFile; fileRef = 34F0AFC121B3784200682170 /* menu-128.png */; };
 		4D0358326DE2F8C2606D902F /* Pods_HomeDrive.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3CF2ACF6E86BB2FCE5D27C2 /* Pods_HomeDrive.framework */; };
 /* End PBXBuildFile section */
 
@@ -31,6 +34,9 @@
 		3404390321AA6C350033C37D /* ListingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingsViewController.swift; sourceTree = "<group>"; };
 		34B0AC6D21AA93A800C721EE /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		34B0AC6F21AA983C00C721EE /* splashscreen.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = splashscreen.png; sourceTree = "<group>"; };
+		34F0AFBD21B374F200682170 /* menu-64.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "menu-64.png"; sourceTree = "<group>"; };
+		34F0AFBF21B3780600682170 /* menu-512.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "menu-512.png"; sourceTree = "<group>"; };
+		34F0AFC121B3784200682170 /* menu-128.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "menu-128.png"; sourceTree = "<group>"; };
 		5933E065140E8B4D8401F553 /* Pods-HomeDrive.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HomeDrive.release.xcconfig"; path = "Pods/Target Support Files/Pods-HomeDrive/Pods-HomeDrive.release.xcconfig"; sourceTree = "<group>"; };
 		7CC7F586D7FC4331292A0133 /* Pods-HomeDrive.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HomeDrive.debug.xcconfig"; path = "Pods/Target Support Files/Pods-HomeDrive/Pods-HomeDrive.debug.xcconfig"; sourceTree = "<group>"; };
 		A3CF2ACF6E86BB2FCE5D27C2 /* Pods_HomeDrive.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_HomeDrive.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -79,6 +85,9 @@
 				34037434219B753300AE5B13 /* Info.plist */,
 				3403743A219B791E00AE5B13 /* GoogleService-Info.plist */,
 				34B0AC6F21AA983C00C721EE /* splashscreen.png */,
+				34F0AFBD21B374F200682170 /* menu-64.png */,
+				34F0AFC121B3784200682170 /* menu-128.png */,
+				34F0AFBF21B3780600682170 /* menu-512.png */,
 			);
 			path = HomeDrive;
 			sourceTree = "<group>";
@@ -162,7 +171,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				3403743B219B791E00AE5B13 /* GoogleService-Info.plist in Resources */,
+				34F0AFC021B3780600682170 /* menu-512.png in Resources */,
 				34B0AC7021AA983C00C721EE /* splashscreen.png in Resources */,
+				34F0AFBE21B374F200682170 /* menu-64.png in Resources */,
+				34F0AFC221B3784200682170 /* menu-128.png in Resources */,
 				34037430219B753300AE5B13 /* Assets.xcassets in Resources */,
 				34B0AC6E21AA93A800C721EE /* Launch Screen.storyboard in Resources */,
 				3403742E219B753100AE5B13 /* Main.storyboard in Resources */,

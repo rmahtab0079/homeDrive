@@ -67,7 +67,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, GIDSignInDelegate {
                     return
                 }
                 let storyboard = UIStoryboard(name: "Main", bundle: nil)
-                let vc = storyboard.instantiateViewController(withIdentifier: "NavController")
+                let vc = storyboard.instantiateViewController(withIdentifier: "MapVC")
                 vc.view.frame = rootViewController.view.frame
                 vc.view.layoutIfNeeded()
                 
