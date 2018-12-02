@@ -15,16 +15,18 @@ import FloatingPanel
 class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
     @IBOutlet weak var mapView: GMSMapView!
+    var locationManager = CLLocationManager()
+    var currentLocation: CLLocation?
+    //var placesClient: GMSPlacesClient!
+    var zoomLevel: Float = 20.0
     
     var fpc: FloatingPanelController!
     var listingsVC: ListingsViewController!
-    
     var backdropTapGesture = UITapGestureRecognizer()
     var surfaceTapGesture = UITapGestureRecognizer()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         setUpGoogleMaps()
         setUpFloatingPanel()
     }
@@ -41,17 +43,31 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
     /* Configure google maps initial view settings */
     func setUpGoogleMaps() {
-        // Create a GMSCameraPosition that tells the map to display the
-        // coordinate -33.86, 151.20 at zoom level 6.
-        let camera = GMSCameraPosition.camera(withLatitude: -33.86, longitude: 151.20, zoom: 15)
+        // Create a GMSCameraPosition
+        let camera = GMSCameraPosition.camera(withLatitude: 40.7372003,
+                                              longitude: -73.8245359,
+                                              zoom: 15.0)
         mapView.camera = camera
+        mapView.settings.myLocationButton = true
+        mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // hide map until we got a location update
+        //mapView.isHidden = true
         
+        locationManager = CLLocationManager()
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.requestAlwaysAuthorization()
+        locationManager.distanceFilter = 50
+        locationManager.startUpdatingLocation()
+        locationManager.delegate = (self as CLLocationManagerDelegate)
+        
+        /*
         // Creates a marker in the center of the map.
         let marker = GMSMarker()
         marker.position = CLLocationCoordinate2D(latitude: -33.86, longitude: 151.20)
         marker.title = "Sydney"
         marker.snippet = "Australia"
         marker.map = mapView
+        */
     }
     
     /* function to set up floating panel above google maps view */
@@ -137,5 +153,48 @@ class MyFloatingPanelLayout: FloatingPanelLayout {
         case .half: return 216.0 // A bottom inset from the safe area
         case .tip: return 68.0 // A bottom inset from the safe area
         }
+    }
+}
+
+extension MapViewController: CLLocationManagerDelegate {
+    
+    // Handle incoming location events.
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let location: CLLocation = locations.last!
+        print("Location: \(location)")
+        
+        let camera = GMSCameraPosition.camera(withLatitude: location.coordinate.latitude,
+                                              longitude: location.coordinate.longitude,
+                                              zoom: zoomLevel)
+        
+        if mapView.isHidden {
+            mapView.isHidden = false
+            mapView.camera = camera
+        } else {
+            mapView.animate(to: camera)
+        }
+    }
+    
+    // Handle authorization for the location manager.
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        switch status {
+        case .restricted:
+            print("Location access was restricted.")
+        case .denied:
+            print("User denied access to location.")
+            // Display the map using the default location.
+            mapView.isHidden = false
+        case .notDetermined:
+            print("Location status not determined.")
+        case .authorizedAlways: fallthrough
+        case .authorizedWhenInUse:
+            print("Location status is OK.")
+        }
+    }
+    
+    // Handle location manager errors.
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        locationManager.stopUpdatingLocation()
+        print("Error: \(error)")
     }
 }
