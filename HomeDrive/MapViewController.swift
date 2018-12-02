@@ -108,7 +108,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
     /* move floating panel to .full on surface tap */
     @objc func handleSurface(tapGesture recognizer: UIGestureRecognizer) {
-        fpc.move(to: .full, animated: true)
+        fpc.move(to: .half, animated: true)
     }
     
     /* move floating panel to .tip on backdrop tap */
@@ -156,12 +156,12 @@ class MyFloatingPanelLayout: FloatingPanelLayout {
     }
     
     public var supportedPositions: Set<FloatingPanelPosition> {
-        return [.full, .tip]
+        return [.full, .half, .tip]
     }
     
     public func insetFor(position: FloatingPanelPosition) -> CGFloat? {
         switch position {
-        case .full: return 300 // A top inset from safe area
+        case .full: return 16.0 // A top inset from safe area
         case .half: return 216.0 // A bottom inset from the safe area
         case .tip: return 68.0 // A bottom inset from the safe area
         }
