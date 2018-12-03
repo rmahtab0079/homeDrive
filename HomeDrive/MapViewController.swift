@@ -100,15 +100,19 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         /* set up tap gestures for surface and backdrop */
         surfaceTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleSurface(tapGesture:)))
         fpc.surfaceView.addGestureRecognizer(surfaceTapGesture)
-        surfaceTapGesture.isEnabled = (fpc.position == .tip)
+        surfaceTapGesture.isEnabled = (fpc.position == .tip || fpc.position == .half)
         
         backdropTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleBackdrop(_:)))
         fpc.backdropView.addGestureRecognizer(backdropTapGesture)
     }
     
-    /* move floating panel to .full on surface tap */
+    /* move floating panel to .half on surface tap */
     @objc func handleSurface(tapGesture recognizer: UIGestureRecognizer) {
-        fpc.move(to: .half, animated: true)
+        if (fpc.position == .half) {
+            fpc.move(to: .tip, animated: true)
+        } else {
+            fpc.move(to: .half, animated: true)
+        }
     }
     
     /* move floating panel to .tip on backdrop tap */
@@ -145,7 +149,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
     // Enable `surfaceTapGesture` only at `tip` position
     func floatingPanelDidChangePosition(_ vc: FloatingPanelController) {
-        surfaceTapGesture.isEnabled = (vc.position == .tip)
+        surfaceTapGesture.isEnabled = (vc.position == .tip || vc.position == .half)
     }
 }
 
@@ -162,7 +166,7 @@ class MyFloatingPanelLayout: FloatingPanelLayout {
     public func insetFor(position: FloatingPanelPosition) -> CGFloat? {
         switch position {
         case .full: return 16.0 // A top inset from safe area
-        case .half: return 216.0 // A bottom inset from the safe area
+        case .half: return 350 // A bottom inset from the safe area
         case .tip: return 68.0 // A bottom inset from the safe area
         }
     }
