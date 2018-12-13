@@ -5,7 +5,8 @@
 **Motive** A daily frustration of New York drivers is having difficulty finding parking spaces.
 ,mnbj,hck
 ## Video Walkthrough
-![Walkthru](DemoHack2.gif)
+<img src='https://i.imgur.com/po3ebpA.gif' title='Video Walkthrough' width='' alt='Video Walkthrough' />
+
 
 GIF created with [LiceCap](http://www.cockos.com/licecap/).
 

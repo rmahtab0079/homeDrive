@@ -15,6 +15,9 @@ import SideMenu
 
 class MapViewController: UIViewController, FloatingPanelControllerDelegate {
     
+    private var infoWindow = MapMarkerWindow()
+    fileprivate var locationMarker : GMSMarker? = GMSMarker()
+    
     @IBOutlet weak var mapView: GMSMapView!
     var locationManager = CLLocationManager()
     var currentLocation: CLLocation?
@@ -31,6 +34,7 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         setUpGoogleMaps()
         setUpFloatingPanel()
         setUpSideMenu()
+        self.infoWindow = loadNiB()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -62,14 +66,35 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         locationManager.startUpdatingLocation()
         locationManager.delegate = (self as CLLocationManagerDelegate)
         
-        /*
+        
         // Creates a marker in the center of the map.
         let marker = GMSMarker()
-        marker.position = CLLocationCoordinate2D(latitude: -33.86, longitude: 151.20)
-        marker.title = "Sydney"
-        marker.snippet = "Australia"
+        marker.position = CLLocationCoordinate2D(latitude: 40.7373003, longitude: -73.8256181)
+        marker.title = "House 1"
+        marker.snippet = "Price Per Hour: $2 an Hour"
+        marker.snippet = "Price Per day: $10"
+        marker.snippet = "Available"
+        marker.snippet = "Book Now"
         marker.map = mapView
-        */
+        
+        let marker2 = GMSMarker()
+        marker2.position = CLLocationCoordinate2D(latitude: 40.7375297, longitude: -73.826181)
+        marker2.title = "House 2"
+        marker2.snippet = "Not Available"
+        marker2.map = mapView
+        
+        let marker3 = GMSMarker()
+        marker3.position = CLLocationCoordinate2D(latitude: 40.7370297, longitude: -73.823981)
+        marker3.title = "House 3"
+        marker3.snippet = "Available"
+        marker3.map = mapView
+        
+        let marker4 = GMSMarker()
+        marker4.position = CLLocationCoordinate2D(latitude: 40.738297, longitude: -73.8226181)
+        marker4.title = "House 4"
+        marker4.snippet = "Available"
+        marker4.map = mapView
+        
         
         // overlay button on top of Map
         let btn: UIButton = UIButton(type: UIButton.ButtonType.roundedRect)
@@ -78,6 +103,71 @@ class MapViewController: UIViewController, FloatingPanelControllerDelegate {
         btn.setBackgroundImage(btnIcon, for: .normal)
         btn.addTarget(self, action: #selector(onTapMenu(_:)), for: .touchUpInside)
         self.view.addSubview(btn)
+    }
+    
+    // Function that allows to
+  
+    // MARK: GMSMapViewDelegate
+//    func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
+//        mapView.animate(toLocation: CLLocationCoordinate2D(latitude: marker.position.latitude, longitude: marker.position.longitude))
+////        detailsViewController.marker = marker
+//        present(BookingViewController, animated: true)
+//        return true
+//    }
+    
+    func loadNiB() -> MapMarkerWindow {
+        let infoWindow = MapMarkerWindow.instanceFromNib() as! MapMarkerWindow
+        return infoWindow
+    }
+    
+    func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
+        var markerData : NSDictionary?
+        if let data = marker.userData! as? NSDictionary {
+            markerData = data
+        }
+        locationMarker = marker
+        infoWindow.removeFromSuperview()
+        infoWindow = loadNiB()
+        guard let location = locationMarker?.position else {
+            print("locationMarker is nil")
+            return false
+        }
+        // Pass the spot data to the info window, and set its delegate to self
+        infoWindow.spotData = markerData
+        infoWindow.delegate = self as? MapMarkerDelegate
+        // Configure UI properties of info window
+        infoWindow.alpha = 0.9
+        infoWindow.layer.cornerRadius = 12
+        infoWindow.layer.borderWidth = 2
+        
+//        let address = markerData!["address"]!
+//        let rate = markerData!["rate"]!
+//        let fromTime = markerData!["fromTime"]!
+//        let toTime = markerData!["toTime"]!
+        
+//        infoWindow.PriceLabel.text = address as? String
+       
+        // Offset the info window to be directly above the tapped marker
+        infoWindow.center = mapView.projection.point(for: location)
+        infoWindow.center.y = infoWindow.center.y - 82
+        self.view.addSubview(infoWindow)
+        return false
+    }
+    
+    
+    func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
+        if (locationMarker != nil){
+            guard let location = locationMarker?.position else {
+                print("locationMarker is nil")
+                return
+            }
+            infoWindow.center = mapView.projection.point(for: location)
+            infoWindow.center.y = infoWindow.center.y - 82
+        }
+    }
+    
+    func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
+        infoWindow.removeFromSuperview()
     }
     
     /* function to set up floating panel above google maps view */

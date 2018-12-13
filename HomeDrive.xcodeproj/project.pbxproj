@@ -19,6 +19,10 @@
 		34F0AFC221B3784200682170 /* menu-128.png in Resources */ = {isa = PBXBuildFile; fileRef = 34F0AFC121B3784200682170 /* menu-128.png */; };
 		34F0AFC421B3822B00682170 /* list-96.png in Resources */ = {isa = PBXBuildFile; fileRef = 34F0AFC321B3822B00682170 /* list-96.png */; };
 		34F0AFC621B387F100682170 /* MenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F0AFC521B387F100682170 /* MenuViewController.swift */; };
+		49486CEA21B7336B00FF53D8 /* BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49486CE921B7336B00FF53D8 /* BookingView.swift */; };
+		49486CEC21B7543100FF53D8 /* BookingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49486CEB21B7543100FF53D8 /* BookingViewController.swift */; };
+		49486CEE21B757CD00FF53D8 /* MapMarkerWindowView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 49486CED21B757CD00FF53D8 /* MapMarkerWindowView.xib */; };
+		49486CF021B7585600FF53D8 /* MapMarkerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49486CEF21B7585600FF53D8 /* MapMarkerWindow.swift */; };
 		4D0358326DE2F8C2606D902F /* Pods_HomeDrive.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3CF2ACF6E86BB2FCE5D27C2 /* Pods_HomeDrive.framework */; };
 /* End PBXBuildFile section */
 
@@ -37,6 +41,10 @@
 		34F0AFC121B3784200682170 /* menu-128.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "menu-128.png"; sourceTree = "<group>"; };
 		34F0AFC321B3822B00682170 /* list-96.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "list-96.png"; sourceTree = "<group>"; };
 		34F0AFC521B387F100682170 /* MenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuViewController.swift; sourceTree = "<group>"; };
+		49486CE921B7336B00FF53D8 /* BookingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingView.swift; sourceTree = "<group>"; };
+		49486CEB21B7543100FF53D8 /* BookingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingViewController.swift; sourceTree = "<group>"; };
+		49486CED21B757CD00FF53D8 /* MapMarkerWindowView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MapMarkerWindowView.xib; sourceTree = "<group>"; };
+		49486CEF21B7585600FF53D8 /* MapMarkerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarkerWindow.swift; sourceTree = "<group>"; };
 		5933E065140E8B4D8401F553 /* Pods-HomeDrive.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HomeDrive.release.xcconfig"; path = "Pods/Target Support Files/Pods-HomeDrive/Pods-HomeDrive.release.xcconfig"; sourceTree = "<group>"; };
 		7CC7F586D7FC4331292A0133 /* Pods-HomeDrive.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HomeDrive.debug.xcconfig"; path = "Pods/Target Support Files/Pods-HomeDrive/Pods-HomeDrive.debug.xcconfig"; sourceTree = "<group>"; };
 		A3CF2ACF6E86BB2FCE5D27C2 /* Pods_HomeDrive.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_HomeDrive.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -81,6 +89,10 @@
 				34F0AFC521B387F100682170 /* MenuViewController.swift */,
 				3404390321AA6C350033C37D /* ListingsViewController.swift */,
 				3403742C219B753100AE5B13 /* Main.storyboard */,
+				49486CE921B7336B00FF53D8 /* BookingView.swift */,
+				49486CEB21B7543100FF53D8 /* BookingViewController.swift */,
+				49486CED21B757CD00FF53D8 /* MapMarkerWindowView.xib */,
+				49486CEF21B7585600FF53D8 /* MapMarkerWindow.swift */,
 				34B0AC6D21AA93A800C721EE /* Launch Screen.storyboard */,
 				3403742F219B753300AE5B13 /* Assets.xcassets */,
 				34037434219B753300AE5B13 /* Info.plist */,
@@ -173,6 +185,7 @@
 				3403743B219B791E00AE5B13 /* GoogleService-Info.plist in Resources */,
 				34F0AFC421B3822B00682170 /* list-96.png in Resources */,
 				34B0AC7021AA983C00C721EE /* splashscreen.png in Resources */,
+				49486CEE21B757CD00FF53D8 /* MapMarkerWindowView.xib in Resources */,
 				34F0AFC221B3784200682170 /* menu-128.png in Resources */,
 				34037430219B753300AE5B13 /* Assets.xcassets in Resources */,
 				34B0AC6E21AA93A800C721EE /* Launch Screen.storyboard in Resources */,
@@ -274,10 +287,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				49486CF021B7585600FF53D8 /* MapMarkerWindow.swift in Sources */,
+				49486CEA21B7336B00FF53D8 /* BookingView.swift in Sources */,
 				3403743D219B7E8700AE5B13 /* LoginViewController.swift in Sources */,
 				34F0AFC621B387F100682170 /* MenuViewController.swift in Sources */,
 				3404390221AA63DC0033C37D /* MapViewController.swift in Sources */,
 				34037429219B753100AE5B13 /* AppDelegate.swift in Sources */,
+				49486CEC21B7543100FF53D8 /* BookingViewController.swift in Sources */,
 				3404390421AA6C350033C37D /* ListingsViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
